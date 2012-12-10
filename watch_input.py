@@ -8,6 +8,8 @@ import liblo
 record_state = False
 play_state = False
 select_state = False
+selected_voice = 0
+max_voices = 8
 
 # where are the gpio files
 gpio_base = '/sys/class/gpio/'
@@ -43,13 +45,15 @@ def setup_pin(pin):
 def watch_select(po, f):
     """Watch select button and update osc"""
     global select_state
+    global selected_voice
     while 1:
         events = po.poll()
         # if not, poll will always see something new
         state = f.read(1)
         if state != select_state:
-            liblo.send(target, '/select')
-            select_state = not select_state
+            selected_voice += 1
+            if selected_voice > max_voices:
+                selected_voice = 0
 
 def watch_play(po, f):
     """Watch play button and update osc"""
@@ -59,7 +63,7 @@ def watch_play(po, f):
         # if not, poll will always see something new
         state = f.read(1)
         if state != select_state:
-            liblo.send(target, '/play')
+            liblo.send(target, '/play', ('i', selected_voice))
             play_state = not play_state
 
 def watch_record(po, f):
@@ -70,7 +74,7 @@ def watch_record(po, f):
         # if not, poll will always see something new
         state = f.read(1)
         if state != select_state:
-            liblo.send(target, '/record')
+            liblo.send(target, '/record', ('i', selected_voice))
             record_state = not record_state
 
 target = liblo.Address('osc.udp://127.0.0.1:6449/')
